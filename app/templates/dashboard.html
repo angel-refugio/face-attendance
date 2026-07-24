@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+{% block title %}Dashboard - FaceAttendance{% endblock %}
+
+{% block content %}
+<h2 class="mb-4"><i class="bi bi-speedometer2"></i> Dashboard</h2>
+
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-bg-primary">
+            <div class="card-body">
+                <h5 class="card-title">Empleados Presentes</h5>
+                <p class="display-6">{{ stats.total_today }}</p>
+                <small>de {{ stats.total_employees }} activos</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-bg-success">
+            <div class="card-body">
+                <h5 class="card-title">Puntuales</h5>
+                <p class="display-6">{{ stats.on_time }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-bg-warning">
+            <div class="card-body">
+                <h5 class="card-title">Tardanzas</h5>
+                <p class="display-6">{{ stats.late }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-bg-info">
+            <div class="card-body">
+                <h5 class="card-title">Asistencia</h5>
+                <p class="display-6">{{ stats.attendance_rate }}%</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="bi bi-calendar-check"></i> Asistencia de Hoy</h5>
+                <a href="{{ url_for('camera.camera_view') }}" class="btn btn-sm btn-primary">
+                    <i class="bi bi-camera"></i> Abrir Camara
+                </a>
+            </div>
+            <div class="card-body">
+                {% if today_records %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Empleado</th>
+                                <th>Departamento</th>
+                                <th>Hora</th>
+                                <th>Confianza</th>
+                                <th>Estado</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for record in today_records %}
+                            <tr>
+                                <td><strong>{{ record.employee.name }}</strong></td>
+                                <td>{{ record.employee.department or '-' }}</td>
+                                <td>{{ record.check_in_time.strftime('%H:%M:%S') }}</td>
+                                <td>{{ "%.1f"|format(record.confidence_score) }}%</td>
+                                <td>
+                                    {% if record.status == 'on_time' %}
+                                        <span class="badge bg-success">Puntual</span>
+                                    {% else %}
+                                        <span class="badge bg-warning text-dark">Tarde</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-muted text-center py-4">No hay registros de asistencia hoy</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-people"></i> Empleados Activos</h5>
+            </div>
+            <div class="card-body">
+                {% if employees %}
+                <ul class="list-group list-group-flush">
+                    {% for emp in employees %}
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <div>
+                            <strong>{{ emp.name }}</strong>
+                            <br><small class="text-muted">{{ emp.department or 'Sin departamento' }}</small>
+                            <br><small class="text-muted">{{ emp.work_days_display }} | {{ emp.work_start_time }}</small>
+                        </div>
+                        {% if emp.face_registered %}
+                            <span class="badge bg-success" title="Rostro registrado">
+                                <i class="bi bi-check-circle"></i>
+                            </span>
+                        {% else %}
+                            <span class="badge bg-secondary" title="Sin rostro registrado">
+                                <i class="bi bi-x-circle"></i>
+                            </span>
+                        {% endif %}
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <p class="text-muted text-center py-3">No hay empleados registrados</p>
+                <a href="{{ url_for('employees.add_employee') }}" class="btn btn-primary w-100">
+                    <i class="bi bi-plus"></i> Agregar Empleado
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

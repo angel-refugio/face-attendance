@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% block title %}Empleados - FaceAttendance{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-people"></i> Empleados</h2>
+    <div>
+        <form action="{{ url_for('employees.retrain_model') }}" method="POST" class="d-inline">
+            <button type="submit" class="btn btn-outline-primary" onclick="return confirm('Reentrenar el modelo?')">
+                <i class="bi bi-arrow-clockwise"></i> Reentrenar Modelo
+            </button>
+        </form>
+        <a href="{{ url_for('employees.add_employee') }}" class="btn btn-primary">
+            <i class="bi bi-plus"></i> Nuevo Empleado
+        </a>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        {% if employees %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Nombre</th>
+                        <th>Departamento</th>
+                        <th>Puesto</th>
+                        <th>Horario</th>
+                        <th>Estado</th>
+                        <th>Rostro</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for emp in employees %}
+                    <tr>
+                        <td><strong>{{ emp.name }}</strong></td>
+                        <td>{{ emp.department or '-' }}</td>
+                        <td>{{ emp.position or '-' }}</td>
+                        <td>
+                            <small>{{ emp.work_days_display }}</small><br>
+                            <span class="badge bg-info">{{ emp.work_start_time }}</span>
+                        </td>
+                        <td>
+                            {% if emp.status == 'active' %}
+                                <span class="badge bg-success">Activo</span>
+                            {% else %}
+                                <span class="badge bg-secondary">Inactivo</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if emp.face_registered %}
+                                <span class="badge bg-success"><i class="bi bi-check-circle"></i> Registrado</span>
+                            {% else %}
+                                <span class="badge bg-warning text-dark"><i class="bi bi-exclamation-circle"></i> Pendiente</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                <a href="{{ url_for('camera.register_face', employee_id=emp.id) }}" class="btn btn-outline-primary" title="Registrar rostro">
+                                    <i class="bi bi-camera"></i>
+                                </a>
+                                <a href="{{ url_for('employees.edit_employee', employee_id=emp.id) }}" class="btn btn-outline-secondary" title="Editar">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                <form action="{{ url_for('employees.toggle_status', employee_id=emp.id) }}" method="POST" class="d-inline">
+                                    <button type="submit" class="btn btn-outline-{{ 'warning' if emp.status == 'active' else 'success' }}" title="{{ 'Desactivar' if emp.status == 'active' else 'Activar' }}">
+                                        <i class="bi bi-{{ 'pause' if emp.status == 'active' else 'play' }}"></i>
+                                    </button>
+                                </form>
+                                <form action="{{ url_for('employees.delete_employee', employee_id=emp.id) }}" method="POST" class="d-inline" onsubmit="return confirm('Eliminar empleado {{ emp.name }}?')">
+                                    <button type="submit" class="btn btn-outline-danger" title="Eliminar">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="text-muted text-center py-4">No hay empleados registrados</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

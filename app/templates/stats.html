@@ -1,0 +1,144 @@
+{% extends "base.html" %}
+{% block title %}Estadisticas - FaceAttendance{% endblock %}
+
+{% block content %}
+<h2 class="mb-4"><i class="bi bi-bar-chart"></i> Estadisticas</h2>
+
+<div class="row mb-4">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Asistencia ultimos 14 dias</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="attendanceChart" height="100"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Resumen</h5>
+            </div>
+            <div class="card-body">
+                {% set total_records = chart_on_time|sum + chart_late|sum %}
+                {% set total_on_time = chart_on_time|sum %}
+                {% set total_late = chart_late|sum %}
+                <div class="mb-3">
+                    <h6>Total de registros (14 dias)</h6>
+                    <p class="display-6">{{ total_records }}</p>
+                </div>
+                <div class="mb-3">
+                    <h6>Puntuales</h6>
+                    <p class="text-success display-6">{{ total_on_time }}</p>
+                </div>
+                <div class="mb-3">
+                    <h6>Tardanzas</h6>
+                    <p class="text-warning display-6">{{ total_late }}</p>
+                </div>
+                {% if total_records > 0 %}
+                <div class="progress" style="height: 25px;">
+                    <div class="progress-bar bg-success" style="width: {{ (total_on_time / total_records * 100)|round }}%">
+                        {{ (total_on_time / total_records * 100)|round }}% Puntual
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="bi bi-trophy"></i> Ranking de Puntualidad</h5>
+    </div>
+    <div class="card-body">
+        {% if employee_stats %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Empleado</th>
+                        <th>Departamento</th>
+                        <th>Total Registros</th>
+                        <th>Puntuales</th>
+                        <th>Tardanzas</th>
+                        <th>Puntualidad</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for stat in employee_stats %}
+                    <tr>
+                        <td>
+                            {% if loop.index == 1 %}
+                                <i class="bi bi-trophy-fill text-warning"></i>
+                            {% elif loop.index == 2 %}
+                                <i class="bi bi-trophy-fill text-secondary"></i>
+                            {% elif loop.index == 3 %}
+                                <i class="bi bi-trophy-fill text-danger"></i>
+                            {% else %}
+                                {{ loop.index }}
+                            {% endif %}
+                        </td>
+                        <td><strong>{{ stat.employee.name }}</strong></td>
+                        <td>{{ stat.employee.department or '-' }}</td>
+                        <td>{{ stat.total }}</td>
+                        <td><span class="text-success">{{ stat.on_time }}</span></td>
+                        <td><span class="text-warning">{{ stat.late }}</span></td>
+                        <td>
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="progress flex-grow-1" style="height: 20px;">
+                                    <div class="progress-bar bg-{{ 'success' if stat.punctuality >= 80 else 'warning' if stat.punctuality >= 60 else 'danger' }}"
+                                         style="width: {{ stat.punctuality }}%">
+                                    </div>
+                                </div>
+                                <strong>{{ stat.punctuality }}%</strong>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="text-muted text-center py-4">No hay datos suficientes</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const ctx = document.getElementById('attendanceChart').getContext('2d');
+new Chart(ctx, {
+    type: 'bar',
+    data: {
+        labels: {{ chart_labels|tojson }},
+        datasets: [
+            {
+                label: 'Puntuales',
+                data: {{ chart_on_time|tojson }},
+                backgroundColor: 'rgba(25, 135, 84, 0.7)',
+                borderColor: 'rgba(25, 135, 84, 1)',
+                borderWidth: 1
+            },
+            {
+                label: 'Tardanzas',
+                data: {{ chart_late|tojson }},
+                backgroundColor: 'rgba(255, 193, 7, 0.7)',
+                borderColor: 'rgba(255, 193, 7, 1)',
+                borderWidth: 1
+            }
+        ]
+    },
+    options: {
+        responsive: true,
+        scales: {
+            x: { stacked: true },
+            y: { stacked: true, beginAtZero: true }
+        }
+    }
+});
+</script>
+{% endblock %}

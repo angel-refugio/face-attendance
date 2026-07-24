@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+{% block title %}Registrar Rostro - {{ employee.name }} - FaceAttendance{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-camera"></i> Registrar Rostro: {{ employee.name }}</h2>
+    <a href="{{ url_for('employees.list_employees') }}" class="btn btn-secondary">
+        <i class="bi bi-arrow-left"></i> Volver
+    </a>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-body text-center">
+                <video id="video" autoplay playsinline style="max-width: 100%; border-radius: 8px; background: #000;"></video>
+                <canvas id="canvas" style="display: none;"></canvas>
+            </div>
+            <div class="card-footer text-center">
+                <button id="btnStart" class="btn btn-primary">
+                    <i class="bi bi-play-fill"></i> Iniciar Camara
+                </button>
+                <button id="btnCapture" class="btn btn-success" disabled>
+                    <i class="bi bi-camera"></i> Capturar Foto
+                </button>
+                <button id="btnTrain" class="btn btn-warning">
+                    <i class="bi bi-cpu"></i> Entrenar Modelo
+                </button>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-images"></i> Fotos Capturadas</h5>
+            </div>
+            <div class="card-body">
+                <p class="text-center">
+                    <span id="photoCount" class="display-6">0</span>
+                    <br><small class="text-muted">fotos (minimo 15 recomendado)</small>
+                </p>
+                <div id="status" class="alert alert-info">
+                    Captura al menos 15 fotos desde diferentes angulos
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const employeeId = {{ employee.id }};
+const video = document.getElementById('video');
+const canvas = document.getElementById('canvas');
+const btnStart = document.getElementById('btnStart');
+const btnCapture = document.getElementById('btnCapture');
+const btnTrain = document.getElementById('btnTrain');
+const photoCount = document.getElementById('photoCount');
+const statusDiv = document.getElementById('status');
+let stream = null;
+
+async function loadPhotos() {
+    const response = await fetch(`/camera/api/employee/${employeeId}/photos`);
+    const data = await response.json();
+    photoCount.textContent = data.count;
+    if (data.count >= 15) {
+        statusDiv.className = 'alert alert-success';
+        statusDiv.textContent = `${data.count} fotos capturadas. Listo para entrenar!`;
+    }
+}
+
+btnStart.addEventListener('click', async () => {
+    try {
+        stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        video.srcObject = stream;
+        btnCapture.disabled = false;
+        btnStart.disabled = true;
+    } catch (err) {
+        alert('Error al acceder a la camara: ' + err.message);
+    }
+});
+
+btnCapture.addEventListener('click', async () => {
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    canvas.getContext('2d').drawImage(video, 0, 0);
+    const imageData = canvas.toDataURL('image/jpeg', 0.8);
+
+    const response = await fetch(`/camera/api/capture/${employeeId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ image: imageData })
+    });
+    const data = await response.json();
+
+    if (data.success) {
+        photoCount.textContent = data.count;
+        statusDiv.textContent = data.message;
+        if (data.count >= 15) {
+            statusDiv.className = 'alert alert-success';
+        }
+    } else {
+        statusDiv.className = 'alert alert-warning';
+        statusDiv.textContent = data.message || 'No se detecto rostro';
+    }
+});
+
+btnTrain.addEventListener('click', async () => {
+    statusDiv.className = 'alert alert-info';
+    statusDiv.textContent = 'Entrenando modelo...';
+
+    const response = await fetch('/camera/api/train', { method: 'POST' });
+    const data = await response.json();
+
+    if (data.success) {
+        statusDiv.className = 'alert alert-success';
+        statusDiv.textContent = 'Modelo entrenado correctamente!';
+    } else {
+        statusDiv.className = 'alert alert-danger';
+        statusDiv.textContent = data.message || 'Error al entrenar';
+    }
+});
+
+loadPhotos();
+</script>
+{% endblock %}

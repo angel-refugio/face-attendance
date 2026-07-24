@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+{% block title %}Historial de Asistencia - FaceAttendance{% endblock %}
+
+{% block content %}
+<h2 class="mb-4"><i class="bi bi-calendar-check"></i> Historial de Asistencia</h2>
+
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="bi bi-funnel"></i> Filtros</h5>
+    </div>
+    <div class="card-body">
+        <form method="GET" class="row g-3">
+            <div class="col-md-3">
+                <label class="form-label">Empleado</label>
+                <select name="employee_id" class="form-select">
+                    <option value="">Todos</option>
+                    {% for emp in employees %}
+                    <option value="{{ emp.id }}" {{ 'selected' if filters.employee_id == emp.id }}>{{ emp.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Estado</label>
+                <select name="status" class="form-select">
+                    <option value="">Todos</option>
+                    <option value="on_time" {{ 'selected' if filters.status == 'on_time' }}>Puntual</option>
+                    <option value="late" {{ 'selected' if filters.status == 'late' }}>Tarde</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Desde</label>
+                <input type="date" name="date_from" class="form-control" value="{{ filters.date_from or '' }}">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Hasta</label>
+                <input type="date" name="date_to" class="form-control" value="{{ filters.date_to or '' }}">
+            </div>
+            <div class="col-md-3 d-flex align-items-end gap-2">
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-search"></i> Filtrar
+                </button>
+                <a href="{{ url_for('attendance.history') }}" class="btn btn-outline-secondary">
+                    <i class="bi bi-x"></i> Limpiar
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">Registros ({{ pagination.total }})</h5>
+        <div class="btn-group">
+            <a href="{{ url_for('attendance.export_csv', employee_id=filters.employee_id, date_from=filters.date_from, date_to=filters.date_to) }}" class="btn btn-sm btn-outline-success">
+                <i class="bi bi-filetype-csv"></i> CSV
+            </a>
+            <a href="{{ url_for('attendance.export_excel', employee_id=filters.employee_id, date_from=filters.date_from, date_to=filters.date_to) }}" class="btn btn-sm btn-outline-success">
+                <i class="bi bi-file-earmark-excel"></i> Excel
+            </a>
+        </div>
+    </div>
+    <div class="card-body">
+        {% if records %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Empleado</th>
+                        <th>Departamento</th>
+                        <th>Fecha</th>
+                        <th>Hora</th>
+                        <th>Confianza</th>
+                        <th>Estado</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for record in records %}
+                    <tr>
+                        <td><strong>{{ record.employee.name }}</strong></td>
+                        <td>{{ record.employee.department or '-' }}</td>
+                        <td>{{ record.check_in_time.strftime('%Y-%m-%d') }}</td>
+                        <td>{{ record.check_in_time.strftime('%H:%M:%S') }}</td>
+                        <td>{{ "%.1f"|format(record.confidence_score) }}%</td>
+                        <td>
+                            {% if record.status == 'on_time' %}
+                                <span class="badge bg-success">Puntual</span>
+                            {% else %}
+                                <span class="badge bg-warning text-dark">Tarde</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% if pagination.pages > 1 %}
+        <nav>
+            <ul class="pagination justify-content-center">
+                {% if pagination.has_prev %}
+                <li class="page-item">
+                    <a class="page-link" href="{{ url_for('attendance.history', page=pagination.prev_num, employee_id=filters.employee_id, status=filters.status, date_from=filters.date_from, date_to=filters.date_to) }}">Anterior</a>
+                </li>
+                {% endif %}
+                {% for page_num in pagination.iter_pages() %}
+                    {% if page_num %}
+                        <li class="page-item {{ 'active' if page_num == pagination.page }}">
+                            <a class="page-link" href="{{ url_for('attendance.history', page=page_num, employee_id=filters.employee_id, status=filters.status, date_from=filters.date_from, date_to=filters.date_to) }}">{{ page_num }}</a>
+                        </li>
+                    {% else %}
+                        <li class="page-item disabled"><span class="page-link">...</span></li>
+                    {% endif %}
+                {% endfor %}
+                {% if pagination.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="{{ url_for('attendance.history', page=pagination.next_num, employee_id=filters.employee_id, status=filters.status, date_from=filters.date_from, date_to=filters.date_to) }}">Siguiente</a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+
+        {% else %}
+        <p class="text-muted text-center py-4">No hay registros que coincidan con los filtros</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
